@@ -15,6 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 LAST_SOLVED = { n : None for n in LEETCODE_NAMES }
+LAST_ERROR = None
 
 def request_submissions(username, item_count = 5):
     url = "https://leetcode.com/graphql/"
@@ -40,17 +41,19 @@ def request_submissions(username, item_count = 5):
     }
                 
     x = requests.post(url, json = request_data, headers = headers)
-    return x.json()["data"]["recentAcSubmissionList"]
+    return x.json()
 
 
 def test_req(context: CallbackContext) -> None:
     global CUR_PLAYING
     global LEETCODE_NAMES
+    global LAST_ERROR
     job = context.job
 
     try:
         for name in LEETCODE_NAMES:
-            submissions = request_submissions(name)
+            subm_response = request_submissions(name)
+            submissions = subm_response["data"]["recentAcSubmissionList"]
             if len(submissions) == 0:
                 pass
 
@@ -65,7 +68,8 @@ def test_req(context: CallbackContext) -> None:
                 context.bot.send_message(job.context, text=msg)
 
     except Exception as e:
-        context.bot.send_message(job.context, text=f'Exception while requesting submissions:\n{str(e)}')
+        LAST_ERROR = f"{datetime.datetime.now()}\nException: {str(e)}\nResponse: {subm_response}"
+        # context.bot.send_message(job.context, text=f'Exception while requesting submissions:\n{str(e)}')
         pass
 
 
@@ -82,8 +86,15 @@ def start(update: Update, context: CallbackContext) -> None:
     else:
         update.message.reply_text("User not recognized")
 
+def status(update: Update, context: CallbackContext) -> None:
+    if LAST_ERROR:
+        update.message.reply_text(LAST_ERROR)
+    else:
+        update.message.reply_text("No errors")
+
 
 def stop(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("Bot stopped")
     chat_id = update.message.chat_id
     remove_job_if_exists(str(chat_id), context)
 
@@ -103,6 +114,7 @@ def main() -> None:
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("status", status))
     dispatcher.add_handler(CommandHandler("stop", stop))
 
     updater.start_polling()
