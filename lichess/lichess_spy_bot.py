@@ -9,16 +9,34 @@ import json
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 
-from config import *
+import config
 
 # Enable logging
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.WARNING
 )
 
 logger = logging.getLogger(__name__)
 
-CUR_PLAYING = { n : None for n in LICHESS_NAMES }
+CUR_PLAYING = { n : None for n in config.LICHESS_NAMES }
+
+def allow_only(allowed_username):
+    def wrap1(func):
+        def wrap2(*args, **kwargs):
+            update = args[0]
+            if not isinstance(update, Update):
+                raise ValueError("@allow_only expects first arguments to be telegram.Update")
+
+            user = update.effective_user
+            if not user or user.username != allowed_username:
+                update.message.reply_text("User not recognized")
+                return
+
+            return func(*args, **kwargs)
+
+        return wrap2
+    return wrap1
+
 
 def get_game(game_id):
     URL = f"https://lichess.org/game/export/{game_id}"
@@ -30,6 +48,25 @@ def get_game(game_id):
         headers={
             "Accept":"application/json"
         })
+    return res
+
+def get_current_games(user_ids: list[str]) -> dict[str, str]:
+    URL = "https://lichess.org/api/users/status"
+    page = requests.get(URL, 
+        params={
+            "ids": ','.join(user_ids),
+            "withGameIds": "true",
+        })
+    if page.status_code != 200:
+        raise RuntimeError(f"Failed to get lichess status: {page.status_code}")
+
+    res = dict()
+    for v in page.json():
+        n = v['name']
+        if n:
+            game_id = v.get('playingId', None)
+            res[n] = game_id
+
     return res
 
 def update_game(context: CallbackContext) -> None:
@@ -68,65 +105,55 @@ def update_game(context: CallbackContext) -> None:
 
 def update_current_games(context: CallbackContext) -> None:
     global CUR_PLAYING
-    global LICHESS_NAMES
     job = context.job
 
-    URL = "https://lichess.org/api/users/status"
-    page = requests.get(URL, 
-        params={
-            "ids": ','.join(LICHESS_NAMES),
-            "withGameIds": "true",
-        })
-    if page.status_code != 200:
-        print("lichess error code: ", page.status_code)
-        # context.bot.send_message(job.context, text=f'Lichess error: {page}')
+    new_games = get_current_games(config.LICHESS_NAMES)
 
-    tmp = dict()
-    for v in page.json():
-        n = v['name']
-        if n:
-            game_id = v.get('playingId', None)
-            tmp[n] = game_id
-
-    for n in LICHESS_NAMES:
-        if n not in tmp:
-            context.bot.send_message(job.context, text=f'User {n} not found, removing')
-            LICHESS_NAMES.remove(n)
+    for n in config.LICHESS_NAMES:
+        if n not in new_games:
+            logger.warning(f"User {n} not found")
             continue
 
-        if CUR_PLAYING[n] != tmp[n] and tmp[n]:
-            #c = datetime.datetime.now().strftime("%s")
-            #tv_url = f"https://lichess.org/{n}/tv?v={c}"
+        if CUR_PLAYING[n] != new_games[n] and new_games[n]:
             old_game_id = CUR_PLAYING[n]
 
-            game_url = "https://lichess.org/" + tmp[n]
+            game_url = "https://lichess.org/" + new_games[n]
             sent_msg = context.bot.send_message(job.context, text=f'{n} is playing:\n{game_url}', disable_web_page_preview=True, disable_notification=True)
 
+            # TODO: time config constant
             context.job_queue.run_once(update_game, when=60, 
                 context={
                     "msg": sent_msg,
-                    "game_id": tmp[n],
-                    }
+                    "game_id": new_games[n],
+                }
             )
 
-            CUR_PLAYING[n] = tmp[n]
+            CUR_PLAYING[n] = new_games[n]
 
 
+@allow_only(config.OWNER_USERNAME)
 def start(update: Update, context: CallbackContext) -> None:
-    chat_id = update.message.chat_id
     user = update.effective_user
-    if user and user.username == OWNER_USERNAME:
-        remove_job_if_exists(str(chat_id), context)
-        context.job_queue.run_repeating(update_current_games, interval=POLL_INTERVAL, context=chat_id, name=str(chat_id))
-        update.message.reply_text(
-            "Bot enabled\n"
-            f"Lichess users: {LICHESS_NAMES}"
-        )
-    else:
+    if not user or user.username != config.OWNER_USERNAME:
         update.message.reply_text("User not recognized")
+        return
+
+    chat_id = update.message.chat_id
+    remove_job_if_exists(str(chat_id), context)
+    context.job_queue.run_repeating(update_current_games, first=1, interval=config.POLL_INTERVAL, context=chat_id, name=str(chat_id))
+    update.message.reply_text(
+        "Bot enabled\n"
+        f"Lichess users: {config.LICHESS_NAMES}"
+    )
 
 
+@allow_only(config.OWNER_USERNAME)
 def stop(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    if not user or user.username != config.OWNER_USERNAME:
+        update.message.reply_text("User not recognized")
+        return
+
     chat_id = update.message.chat_id
     remove_job_if_exists(str(chat_id), context)
 
@@ -141,7 +168,7 @@ def remove_job_if_exists(name: str, context: CallbackContext) -> bool:
 
 
 def main() -> None:
-    updater = Updater(TELEGRAM_TOKEN)
+    updater = Updater(config.TELEGRAM_TOKEN)
 
     dispatcher = updater.dispatcher
 
