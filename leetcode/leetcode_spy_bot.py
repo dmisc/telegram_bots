@@ -7,7 +7,7 @@ import json
 from dataclasses import dataclass
 
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Updater, CommandHandler, CallbackContext, Defaults
 
 import config
 
@@ -168,7 +168,7 @@ def remove_job_if_exists(name: str, context: CallbackContext) -> bool:
 
 
 def main() -> None:
-    updater = Updater(config.TELEGRAM_TOKEN)
+    updater = Updater(config.TELEGRAM_TOKEN, defaults=Defaults(timeout=120))
 
     dispatcher = updater.dispatcher
 
