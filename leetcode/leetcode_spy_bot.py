@@ -11,6 +11,8 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 
 import config
 
+from bot_common.decorators import allow_only
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.WARNING
 )
@@ -120,12 +122,8 @@ def update_latest_submissions(context: CallbackContext) -> None:
 
 
 
+@allow_only(config.OWNER_USERNAME)
 def start(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    if not user or user.username != config.OWNER_USERNAME:
-        update.message.reply_text("User not recognized")
-        return
-
     chat_id = update.message.chat_id
 
     remove_job_if_exists(str(chat_id), context)
@@ -153,16 +151,11 @@ def status(update: Update, context: CallbackContext) -> None:
         update.message.reply_text("No errors")
 
 
+@allow_only(config.OWNER_USERNAME)
 def stop(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    if not user or user.username != config.OWNER_USERNAME:
-        update.message.reply_text("User not recognized")
-        return
-
-    update.message.reply_text("Bot stopped")
     chat_id = update.message.chat_id
     remove_job_if_exists(str(chat_id), context)
-
+    update.message.reply_text("Bot stopped")
 
 
 def remove_job_if_exists(name: str, context: CallbackContext) -> bool:

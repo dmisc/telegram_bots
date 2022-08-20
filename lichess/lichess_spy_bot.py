@@ -11,6 +11,8 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 
 import config
 
+from bot_common.decorators import allow_only
+
 # Enable logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.WARNING
@@ -20,22 +22,6 @@ logger = logging.getLogger(__name__)
 
 CUR_PLAYING = { n : None for n in config.LICHESS_NAMES }
 
-def allow_only(allowed_username):
-    def wrap1(func):
-        def wrap2(*args, **kwargs):
-            update = args[0]
-            if not isinstance(update, Update):
-                raise ValueError("@allow_only expects first arguments to be telegram.Update")
-
-            user = update.effective_user
-            if not user or user.username != allowed_username:
-                update.message.reply_text("User not recognized")
-                return
-
-            return func(*args, **kwargs)
-
-        return wrap2
-    return wrap1
 
 
 def get_game(game_id):
@@ -133,11 +119,6 @@ def update_current_games(context: CallbackContext) -> None:
 
 @allow_only(config.OWNER_USERNAME)
 def start(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    if not user or user.username != config.OWNER_USERNAME:
-        update.message.reply_text("User not recognized")
-        return
-
     chat_id = update.message.chat_id
     remove_job_if_exists(str(chat_id), context)
     context.job_queue.run_repeating(update_current_games, first=1, interval=config.POLL_INTERVAL, context=chat_id, name=str(chat_id))
@@ -149,13 +130,9 @@ def start(update: Update, context: CallbackContext) -> None:
 
 @allow_only(config.OWNER_USERNAME)
 def stop(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    if not user or user.username != config.OWNER_USERNAME:
-        update.message.reply_text("User not recognized")
-        return
-
     chat_id = update.message.chat_id
     remove_job_if_exists(str(chat_id), context)
+    update.message.reply_text("Bot stopped")
 
 
 def remove_job_if_exists(name: str, context: CallbackContext) -> bool:

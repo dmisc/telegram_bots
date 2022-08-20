@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "lichess_spy_bot"
+version = "0.1.0"
+description = ""
+authors = ["dmisc <dmisc@pm.me>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+requests = "^2.28.1"
+python-telegram-bot = "^13.13"
+bot-common = {path = "../bot_common"}
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
