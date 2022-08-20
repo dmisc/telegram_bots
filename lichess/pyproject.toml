@@ -8,7 +8,7 @@ authors = ["dmisc <dmisc@pm.me>"]
 python = "^3.9"
 requests = "^2.28.1"
 python-telegram-bot = "^13.13"
-bot-common = {path = "../bot_common"}
+bot-common = {path = "../bot_common", develop = true}
 
 [tool.poetry.dev-dependencies]
 
