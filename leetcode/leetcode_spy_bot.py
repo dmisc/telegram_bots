@@ -12,11 +12,9 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 import config
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.WARNING
 )
 logger = logging.getLogger(__name__)
-
-LAST_SOLVED = { n : None for n in config.LEETCODE_NAMES }
 
 LEETCODE_GQL_URL = "https://leetcode.com/graphql/"
 
@@ -86,36 +84,39 @@ def request_submissions(username, item_count = 5):
 
 def update_latest_submissions(context: CallbackContext) -> None:
     job = context.job
+    name = job.context["username"]
+    chat_id = job.context["chat_id"]
+    last_solved = job.context["last_solved"]
 
-    for name in config.LEETCODE_NAMES:
-        try:
-            submissions = request_submissions(name)
-        except Exception as e:
-            logger.error("request_submissions: ", e)
-            LastError.value = f"{datetime.datetime.now()}\nException: {str(e)}\nResponse: {subm_response}"
+    try:
+        submissions = request_submissions(name)
+    except Exception as e:
+        logger.error("request_submissions: ", e)
+        LastError.value = f"{datetime.datetime.now()}\nException: {str(e)}\nResponse: {subm_response}"
+        return
 
-        if len(submissions) == 0:
-            continue
+    if len(submissions) == 0:
+        return
 
-        if submissions[0]["titleSlug"] != LAST_SOLVED[name]:
-            msg = ""
-            for sub in submissions:
-                if sub["titleSlug"] == LAST_SOLVED[name]:
-                    break
+    if submissions[0]["titleSlug"] != last_solved:
+        msg = ""
+        for sub in submissions:
+            if sub["titleSlug"] == last_solved:
+                break
 
-                msg += f'{name} solved <a href="https://leetcode.com/problems/{sub["titleSlug"]}/">{sub["title"]}</a>'
-                try:
-                    q_data = request_question_data(sub["titleSlug"])
-                    difficulty = DIFFICULTY_EMOJI[q_data["difficulty"]]
-                    acceptance = json.loads(q_data["stats"])["acRate"]
-                    msg += f"{difficulty} (acceptance {acceptance})"
-                except Exception as e:
-                    msg += f" {e}"
+            msg += f'{name} solved <a href="https://leetcode.com/problems/{sub["titleSlug"]}/">{sub["title"]}</a>'
+            try:
+                q_data = request_question_data(sub["titleSlug"])
+                difficulty = DIFFICULTY_EMOJI[q_data["difficulty"]]
+                acceptance = json.loads(q_data["stats"])["acRate"]
+                msg += f"{difficulty} (acceptance {acceptance})"
+            except Exception as e:
+                msg += f" {e}"
 
-                msg += "\n\n"
+            msg += "\n\n"
 
-            LAST_SOLVED[name] = submissions[0]["titleSlug"]
-            context.bot.send_message(job.context, text=msg, disable_web_page_preview=True, parse_mode="HTML")
+        job.context["last_solved"] = submissions[0]["titleSlug"]
+        context.bot.send_message(chat_id, text=msg, disable_web_page_preview=True, parse_mode="HTML")
 
 
 
@@ -128,7 +129,18 @@ def start(update: Update, context: CallbackContext) -> None:
     chat_id = update.message.chat_id
 
     remove_job_if_exists(str(chat_id), context)
-    context.job_queue.run_repeating(update_latest_submissions, first=1, interval=config.POLL_INTERVAL, context=chat_id, name=str(chat_id))
+    for username in config.LEETCODE_NAMES:
+        context.job_queue.run_repeating(
+                update_latest_submissions,
+                first=1,
+                interval=config.POLL_INTERVAL,
+                context={
+                    "chat_id": chat_id,
+                    "username": username,
+                    "last_solved": None,
+                },
+                name=str(chat_id)
+        )
     update.message.reply_text(
         "Bot enabled\n"
         f"Leetcode users: {config.LEETCODE_NAMES}"
