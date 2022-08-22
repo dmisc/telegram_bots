@@ -12,6 +12,10 @@ bot-common = {path = "../bot_common", develop = true}
 
 [tool.poetry.dev-dependencies]
 
+[tool.poetry.group.dev.dependencies]
+black = "^22.6.0"
+isort = "^5.10.1"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

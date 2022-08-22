@@ -1,0 +1,11 @@
+[Unit]
+Description=py bot: {PROJ_ROOT}
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={PROJ_ROOT}
+ExecStart=env poetry run service
+
+[Install]
+WantedBy=default.target
