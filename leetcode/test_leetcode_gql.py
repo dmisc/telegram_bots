@@ -2,11 +2,11 @@
 
 import requests
 
-def request_subms(username, item_count = 5):
+
+def request_subms(username, item_count=5):
     url = "https://leetcode.com/graphql/"
     request_data = {
-        "query": 
-            """query recentAcSubmissions($username: String!, $limit: Int!) {
+        "query": """query recentAcSubmissions($username: String!, $limit: Int!) {
                 recentAcSubmissionList(username: $username, limit: $limit) {
                     id
                     title
@@ -21,32 +21,32 @@ def request_subms(username, item_count = 5):
     }
 
     headers = {
-            "Referer": f"https://leetcode.com/{username}/",
-            "Content-Type": "application/json",
+        "Referer": f"https://leetcode.com/{username}/",
+        "Content-Type": "application/json",
     }
-                
-    x = requests.post(url, json = request_data, headers = headers)
+
+    x = requests.post(url, json=request_data, headers=headers)
 
     return x.json()["data"]["recentAcSubmissionList"]
 
 
-#print(request_subms(username=""))
-#print(request_subms(username=""))
-#print(x)
-#print(x.text)
-#print(x.headers)
+# print(request_subms(username=""))
+# print(request_subms(username=""))
+# print(x)
+# print(x.text)
+# print(x.headers)
+
 
 def request_question_data(title_slug):
     url = "https://leetcode.com/graphql/"
     request_data = {
-        "query": 
-
-    #similarQuestions
-    #topicTags {
-    #  name
-    #  slug
-    #}
-"""
+        "query":
+        # similarQuestions
+        # topicTags {
+        #  name
+        #  slug
+        # }
+        """
 query questionData($titleSlug: String!) {
   question(titleSlug: $titleSlug) {
     title
@@ -57,21 +57,20 @@ query questionData($titleSlug: String!) {
   }
 }
 """,
-
-
         "variables": {
-	    "titleSlug": title_slug,
+            "titleSlug": title_slug,
         },
     }
 
     headers = {
-            #"Referer": f"https://leetcode.com/{username}/",
-            "Content-Type": "application/json",
+        # "Referer": f"https://leetcode.com/{username}/",
+        "Content-Type": "application/json",
     }
-                
-    x = requests.post(url, json = request_data, headers = headers)
+
+    x = requests.post(url, json=request_data, headers=headers)
 
     return x.json()["data"]["question"]
+
 
 print(request_question_data("find-pivot-index"))
 print(None)
