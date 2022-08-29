@@ -8,7 +8,8 @@ import time
 import requests
 from bot_common.decorators import allow_only
 from telegram import Update
-from telegram.ext import CallbackContext, CommandHandler, Updater, PicklePersistence, Defaults
+from telegram.ext import (CallbackContext, CommandHandler, Defaults,
+                          PicklePersistence, Updater)
 
 import config
 
@@ -24,6 +25,7 @@ DIFFICULTY_EMOJI = {
     "Medium": "🟡",
     "Hard": "🔴",
 }
+
 
 def request_question_data(title_slug):
     request_data = {
@@ -146,10 +148,12 @@ def remove_job_if_exists(name: str, job_queue) -> bool:
         job.schedule_removal()
     return True
 
+
 @allow_only(config.OWNER_USERNAME)
 def clear_all(update: Update, context: CallbackContext) -> None:
     for d in [context.user_data, context.chat_data, context.bot_data]:
         d.clear()
+
 
 # TODO: allow_only after start
 @allow_only(config.OWNER_USERNAME)
@@ -160,6 +164,7 @@ def add_user(update: Update, context: CallbackContext) -> None:
     for n in context.args:
         context.chat_data["last_solved"][n] = None
     update.message.reply_text("Added users: " + str(context.args))
+
 
 # TODO: allow_only after start
 @allow_only(config.OWNER_USERNAME)
@@ -188,19 +193,21 @@ def start_updater_job(chat_id, job_queue, chat_data, bot):
         name=str(chat_id),
     )
     users = list(chat_data["last_solved"].keys())
-    bot.send_message(
-        chat_id,
-        text=f"Bot enabled\nLeetcode users: {users}"
-    )
+    bot.send_message(chat_id, text=f"Bot enabled\nLeetcode users: {users}")
+
 
 def restore_saved_jobs(dispatcher):
     for chat_id in dispatcher.bot_data["active_chats"]:
-        start_updater_job(chat_id, dispatcher.job_queue, dispatcher.chat_data[chat_id], dispatcher.bot)
+        start_updater_job(
+            chat_id, dispatcher.job_queue, dispatcher.chat_data[chat_id], dispatcher.bot
+        )
 
 
 def main() -> None:
-    persistence = PicklePersistence(filename='leetcode_spy_bot.pickle')
-    updater = Updater(config.TELEGRAM_TOKEN, persistence=persistence, defaults=Defaults(timeout=120))
+    persistence = PicklePersistence(filename="leetcode_spy_bot.pickle")
+    updater = Updater(
+        config.TELEGRAM_TOKEN, persistence=persistence, defaults=Defaults(timeout=120)
+    )
 
     dispatcher = updater.dispatcher
 

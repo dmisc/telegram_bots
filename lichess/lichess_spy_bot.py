@@ -9,7 +9,8 @@ from types import SimpleNamespace
 import requests
 from bot_common.decorators import allow_only
 from telegram import Update
-from telegram.ext import CallbackContext, CommandHandler, Updater, PicklePersistence
+from telegram.ext import (CallbackContext, CommandHandler, PicklePersistence,
+                          Updater)
 
 import config
 
@@ -19,6 +20,7 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
 
 def get_game(game_id):
     URL = f"https://lichess.org/game/export/{game_id}"
@@ -153,7 +155,7 @@ def start_updater_job(chat_id, job_queue, chat_data, bot):
         },
         name=str(chat_id),
     )
-    users = list(chat_data['cur_playing'].keys())
+    users = list(chat_data["cur_playing"].keys())
     bot.send_message(
         chat_id,
         text="Bot enabled\n" f"Lichess users: {users}",
@@ -174,6 +176,7 @@ def stop(update: Update, context: CallbackContext) -> None:
     context.bot_data.get("active_chats", list()).remove(chat_id)
     update.message.reply_text("Bot stopped")
 
+
 # TODO: allow_only after start
 @allow_only(config.OWNER_USERNAME)
 def add_user(update: Update, context: CallbackContext) -> None:
@@ -184,6 +187,7 @@ def add_user(update: Update, context: CallbackContext) -> None:
         context.chat_data["cur_playing"][n] = None
     update.message.reply_text("Added users: " + str(context.args))
 
+
 # TODO: allow_only after start
 @allow_only(config.OWNER_USERNAME)
 def del_user(update: Update, context: CallbackContext) -> None:
@@ -193,6 +197,7 @@ def del_user(update: Update, context: CallbackContext) -> None:
     for n in context.args:
         del context.chat_data["cur_playing"][n]
     update.message.reply_text("Removed users: " + str(context.args))
+
 
 def status(update: Update, context: CallbackContext) -> None:
     if len(context.args) >= 2:
@@ -205,10 +210,12 @@ def status(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("chat data: " + str(context.chat_data))
     update.message.reply_text("bot  data: " + str(context.bot_data))
 
+
 @allow_only(config.OWNER_USERNAME)
 def clear_all(update: Update, context: CallbackContext) -> None:
     for d in [context.user_data, context.chat_data, context.bot_data]:
         d.clear()
+
 
 def remove_job_if_exists(name: str, job_queue) -> bool:
     current_jobs = job_queue.get_jobs_by_name(name)
@@ -221,10 +228,13 @@ def remove_job_if_exists(name: str, job_queue) -> bool:
 
 def restore_saved_jobs(dispatcher):
     for chat_id in dispatcher.bot_data["active_chats"]:
-        start_updater_job(chat_id, dispatcher.job_queue, dispatcher.chat_data[chat_id], dispatcher.bot)
+        start_updater_job(
+            chat_id, dispatcher.job_queue, dispatcher.chat_data[chat_id], dispatcher.bot
+        )
+
 
 def main() -> None:
-    persistence = PicklePersistence(filename='lichess_spy_bot.pickle')
+    persistence = PicklePersistence(filename="lichess_spy_bot.pickle")
     updater = Updater(config.TELEGRAM_TOKEN, persistence=persistence)
 
     dispatcher = updater.dispatcher
@@ -240,7 +250,6 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("clear_all", clear_all))
     dispatcher.add_handler(CommandHandler("add_user", add_user))
     dispatcher.add_handler(CommandHandler("del_user", del_user))
-
 
     updater.start_polling()
 
