@@ -15,6 +15,7 @@ SERVICE_PATH := ${HOME}/.config/systemd/user/${SERVICE_NAME}
 service_start: init
 	cp ../template.service ${SERVICE_PATH}
 	sed -i "s^{PROJ_ROOT}^`pwd`^g" ${SERVICE_PATH}
+	sed -i "s^{POETRY}^`which poetry`^g" ${SERVICE_PATH}
 	systemctl --user daemon-reload
 	systemctl --user enable ${SERVICE_NAME}
 	systemctl --user restart ${SERVICE_NAME}

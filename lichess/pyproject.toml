@@ -4,6 +4,11 @@ version = "0.1.0"
 description = ""
 authors = ["dmisc <dmisc@pm.me>"]
 
+[tool.poetry.scripts]
+lichess_spy_bot = "lichess_spy_bot:main"
+lichess-spy-bot = "lichess_spy_bot:main"
+service = "lichess_spy_bot:main"
+
 [tool.poetry.dependencies]
 python = "^3.9"
 requests = "^2.28.1"

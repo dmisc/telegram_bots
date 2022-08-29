@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory={PROJ_ROOT}
-ExecStart=env poetry run service
+ExecStart={POETRY} run service
 
 [Install]
 WantedBy=default.target
