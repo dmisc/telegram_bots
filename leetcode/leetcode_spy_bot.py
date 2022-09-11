@@ -5,13 +5,12 @@ import json
 import logging
 import time
 
+import config
 import requests
 from bot_common.decorators import allow_only
 from telegram import Update
 from telegram.ext import (CallbackContext, CommandHandler, Defaults,
                           PicklePersistence, Updater)
-
-import config
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
