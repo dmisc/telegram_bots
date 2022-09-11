@@ -78,6 +78,15 @@ def update_game(context: CallbackContext) -> None:
             )
             return
 
+        if game.status == "aborted":
+            context.bot.edit_message_text(
+                sent_msg.text + "\nGame aborted",
+                chat_id=sent_msg.chat.id,
+                message_id=sent_msg.message_id,
+                disable_web_page_preview=True,
+            )
+            return
+
         white = game.players.white
         black = game.players.black
         colors = ["⚪️", "⚫️"]
